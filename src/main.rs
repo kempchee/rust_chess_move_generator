@@ -49,29 +49,59 @@ fn main() {
         }
     }
     available_moves.sort();
-    let mut duplicate_count=0;
-    for (index,_) in available_moves.iter().enumerate(){
-        if index!=0{
-            if available_moves[index-1]==available_moves[index]{
-                duplicate_count+=1;
-            }
-        }
-        if index!=7{
-            if available_moves[index+1]==available_moves[index]{
-            }else{
-
-            }
-        }
-    }
+    println!("{:?}",available_moves);
+    let mut moves_to_insert:Vec<String>=vec!();
     for key in duplicate_moves.keys(){
-        //let mut new_moves=vec!();
+        let mut new_moves:Vec<String>=vec!();
         let mut piece_locations=duplicate_moves.get(key).unwrap().clone();
         if piece_locations.len()>1{
-            piece_locations.sort_by(|a,b|a[0].cmp(&b[0]));
+            for (first_index,start_square) in piece_locations.iter().enumerate(){
+                let mut column_matched=false;
+                let mut row_matched=false;
+                for (second_index,comparison_square) in piece_locations.iter().enumerate(){
+                    if second_index!=first_index{
+                        if start_square[1]==comparison_square[1]{
+                            column_matched=true;
+                        }
+                        if start_square[0]==comparison_square[0]{
+                            row_matched=true;
+                        }
+                        if column_matched&&row_matched{
+                            break
+                        }
+                    }
+                }
+                let mut end_of_move_string=key.to_string().chars().nth(1).unwrap().to_string();
+                for i in 2..key.len(){
+                    end_of_move_string=end_of_move_string+&key.to_string().chars().nth(i).unwrap().to_string()[..];
+                }
+                if column_matched&&row_matched{
+                    new_moves.push(key.to_string().chars().nth(0).unwrap().to_string()+COLUMNS_LOOKUP[start_square[1]]+ROWS_LOOKUP[start_square[0]]+&end_of_move_string[..]);
+                }else if column_matched{
+                    new_moves.push(key.to_string().chars().nth(0).unwrap().to_string()+ROWS_LOOKUP[start_square[0]]+&end_of_move_string[..]);
+                }else if row_matched{
+                    new_moves.push(key.to_string().chars().nth(0).unwrap().to_string()+COLUMNS_LOOKUP[start_square[1]]+&end_of_move_string[..]);
+                }else{
+
+                }
+            }
+        }
+        if new_moves.len()>1{
+            let mut move_index=available_moves.binary_search(key);
+            while move_index.is_ok(){
+                available_moves.remove(move_index.unwrap());
+                move_index=available_moves.binary_search(key)
+            }
+            for new_move in new_moves{
+                moves_to_insert.push(new_move);
+            }
         }
     }
+    for new_move in moves_to_insert{
+        available_moves.push(new_move);
+    }
     let converted_fen=convert_array_to_fen(board_array,side_to_play,castling_availability,enpassant_target,half_move_clock,full_move_number);
-    println!("{:?}",converted_fen);
+    //println!("{:?}",converted_fen);
     println!("{:?}",duplicate_moves);
     println!("{:?}",available_moves);
 }
@@ -98,6 +128,7 @@ fn convert_array_to_fen(board_array:[[&str;8];8],side_to_play:&str,castling_avai
             fen_string=fen_string+"/";
         }
     }
+    fen_string=fen_string+" "+side_to_play+" "+castling_availability+" "+enpassant_target+" "+half_move_clock+" "+full_move_number;
     fen_string
 }
 
@@ -142,7 +173,6 @@ fn add_available_moves_rook(start_row:i8,start_column:i8,board_array:&[[&str;8];
     }
 
     while start_column+column_counter<=7{
-        println!("{:?}",(start_column+column_counter));
         let next_square_contents=board_array[start_row as usize][(start_column+column_counter) as usize];
         if next_square_contents==""{
             let possible_move=notation_letter.clone()+COLUMNS_LOOKUP[(start_column+column_counter) as usize].clone()+ROWS_LOOKUP[start_row as usize];
@@ -161,7 +191,6 @@ fn add_available_moves_rook(start_row:i8,start_column:i8,board_array:&[[&str;8];
 
     column_counter=1;
     while start_column-column_counter>=0{
-        println!("{:?}",(start_column-column_counter));
         let next_square_contents=board_array[start_row as usize][(start_column-column_counter) as usize];
         if next_square_contents==""{
             let possible_move=notation_letter.clone()+COLUMNS_LOOKUP[(start_column-column_counter) as usize].clone()+ROWS_LOOKUP[start_row as usize];
